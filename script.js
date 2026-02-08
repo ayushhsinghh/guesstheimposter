@@ -166,10 +166,9 @@ async function refreshLobby() {
             const playersHtml = data.players.map(p => 
                 `<div class="player-item">
                     <span class="player-name">${p.player_name}</span>
-                    <span class="player-status">${p.is_alive ? '✅ Active' : '❌ Voted Out'}</span>
+                    <span class="player-status">${p.is_alive ? '🟢 Active' : '🔴 Voted Out'}</span>
                 </div>`
             ).join('');
-
             document.getElementById('lobby-players').innerHTML = playersHtml;
             
             // Only show start button to creator
@@ -399,8 +398,8 @@ async function showGameResult() {
             const resultHtml = `
                 <div class="alert ${result.is_imposter_caught ? 'alert-success' : 'alert-warning'}" style="font-size: 16px; padding: 20px; text-align: center;">
                     <strong>${result.message}</strong>
-                    <p style="margin-top: 10px; font-size: 14px;">Voted out: <strong>${result.voted_out_name}</strong></p>
-                    <p style="margin-top: 5px; font-size: 14px;">Winners: <strong>${result.winners}</strong></p>
+                    <p style="margin-top: 10px; font-size: 16px;">Voted out: <strong>${result.voted_out_name}</strong></p>
+                    <p style="margin-top: 5px; font-size: 16px;">Winners: <strong>${result.winners}</strong></p>
                 </div>
             `;
             document.getElementById('game-result-content').innerHTML = resultHtml;

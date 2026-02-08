@@ -8,27 +8,18 @@
 </head>
 
 <body>
-    <nav class="navbar">
-        <h2>� Imposter Game</h2>
-        <div class="nav-buttons">
-            <a href="/" class="nav-back-btn">← Home</a>
-        </div>
-    </nav>
-
     <div class="container">
         <!-- GAME PANEL -->
         <div class="panel active" id="game-panel">
             <div class="game-header">
-                <h1>🕵️ Guess the Imposter</h1>
-                <p>Discussion, Deduction, and Deception!</p>
+                <h1 style="color: rgba(175, 176, 238, 0.672);">Guess the Imposter</h1>
             </div>
 
             <div class="card">
                 <!-- Initial Screen -->
                 <div id="initial-screen">
                     <div class="welcome-section">
-                        <h2>Ready to Play?</h2>
-                        <p>Choose how you want to play</p>
+                        <h2>Ready?</h2>
                     </div>
 
                     <!-- Option Buttons -->
@@ -36,12 +27,10 @@
                         <button class="option-btn" onclick="toggleCreateForm()">
                             <span class="option-icon">⚙️</span>
                             <span class="option-label">Create</span>
-                            <span class="option-desc">Start New</span>
                         </button>
                         <button class="option-btn" onclick="toggleJoinForm()">
                             <span class="option-icon">🔗</span>
                             <span class="option-label">Join</span>
-                            <span class="option-desc">Play Now</span>
                         </button>
                     </div>
 
@@ -96,20 +85,19 @@
 
                 <!-- Game Created Screen -->
                 <div id="game-created-screen" style="display: none;">
-                    <h2>✅ Game Created!</h2>
-                    <div class="session-info">
-                        <p><strong>Game Code:</strong> <span id="game-code-display" style="font-size: 20px; color: #667eea; font-weight: bold;"></span></p>
+                    <h2 style="color: rgba(175, 176, 238, 0.672);" >Game Created!</h2>
+                    <div class="session-info session-inline">
+                        <p><strong>Game Code:</strong> <span id="game-code-display"></span></p>
                         <p><strong>Category:</strong> <span id="game-category-display"></span></p>
                     </div>
-
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 style="margin: 0;">👥 Waiting for Players to Join...</h3>
-                        <button onclick="manualRefreshLobby()" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 5px; transition: transform 0.3s;" title="Refresh players list">🔄</button>
+                        <h3 style="color: rgba(175, 176, 238, 0.672);">Waiting for Players to Join...</h3>
+                        <button onclick="manualRefreshLobby()" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 5px; transition: transform 0.3s;" title="Refresh players list">↻</button>
                     </div>
                     <div class="player-list" id="lobby-players"></div>
 
                     <button onclick="startGame()" id="start-btn" style="width: 100%; margin-top: 20px; display: none;">Start Game (Need 2+ players)</button>
-                    <button onclick="goBack()" style="width: 100%; margin-top: 10px; background: #999;">Go Back</button>
+                    <button onclick="goBack()" style="width: 100%; margin-top: 10px; background: #3b3a3a;">Go Back</button>
                 </div>
 
                 <!-- Game Playing Screen -->
