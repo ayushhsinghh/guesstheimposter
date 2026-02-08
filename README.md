@@ -8,14 +8,6 @@ This UI is a polling-based client that interacts with the Game API served by the
 
 - Play : https://game.ayush.ltd
 
-## How it works (overview)
-
-- Players create a game session via `POST /api/game/create`.
-- Other players join with `POST /api/game/{session_id}/join`.
-- The creator starts the game (`POST /api/game/{session_id}/start`).
-- The frontend polls `GET /api/game/{session_id}?player_id={player_id}` to get phase/state updates.
-- Phases: `waiting` → `playing` (discussion) → `voting` → `reveal` → `result`.
-
 ## Rules of the Game
 
 - Players: 2–16 players per session. One player is the Imposter; others are regular players.
@@ -42,4 +34,12 @@ This UI is a polling-based client that interacts with the Game API served by the
 - New round / Play again:
 	- The game creator can start a new round using the 'Play Again' action.
 	- A new imposter is randomly chosen; players remain the same and are reset to alive.
+
+## How it works internally (overview)
+
+- Players create a game session via `POST /api/game/create`.
+- Other players join with `POST /api/game/{session_id}/join`.
+- The creator starts the game (`POST /api/game/{session_id}/start`).
+- The frontend polls `GET /api/game/{session_id}?player_id={player_id}` to get phase/state updates.
+- Phases: `waiting` → `playing` (discussion) → `voting` → `reveal` → `result`.
 
