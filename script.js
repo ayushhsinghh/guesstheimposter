@@ -4,9 +4,67 @@ let currentPlayerId = null;
 let isCreator = false;
 let gameState = null;
 let timers = {};
-let lobbyRefreshInterval = null;
 let lastPhase = 'waiting';
-let autoRefreshInterval = null;
+
+// ── Unified Adaptive Poller ─────────────────────────────────────────────
+let _pollTimer = null;
+let _pollPaused = false;
+
+// Phase → polling interval in ms
+const POLL_INTERVALS = {
+    waiting: 8000,  // lobby – nothing urgent
+    discussion: 5000,  // players talking, low urgency
+    playing: 5000,  // alias for discussion
+    voting: 2000,  // votes are time-sensitive
+    reveal: 3000,  // short wait for reveal button
+    result: 6000,  // slow poll – detect "play again" from creator
+};
+
+function getPollingInterval() {
+    return POLL_INTERVALS[lastPhase] || 4000;
+}
+
+function startPolling() {
+    stopPolling();
+    const interval = getPollingInterval();
+    if (interval === 0) return; // result phase – don't poll
+    _pollTimer = setInterval(() => {
+        if (_pollPaused) return;
+        if (lastPhase === 'waiting') {
+            refreshLobby();
+        } else {
+            loadGameState();
+        }
+    }, interval);
+}
+
+function stopPolling() {
+    if (_pollTimer) {
+        clearInterval(_pollTimer);
+        _pollTimer = null;
+    }
+}
+
+// Restart poller when phase changes (new interval may be needed)
+function restartPollingIfNeeded(newPhase) {
+    if (POLL_INTERVALS[newPhase] !== POLL_INTERVALS[lastPhase]) {
+        startPolling();
+    }
+}
+
+// Pause/resume when browser tab visibility changes
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        _pollPaused = true;
+    } else {
+        _pollPaused = false;
+        // Immediately fetch fresh state when user returns
+        if (currentSession) {
+            if (lastPhase === 'waiting') refreshLobby();
+            else loadGameState();
+        }
+    }
+});
 
 console.log('Game script loaded successfully');
 
@@ -88,9 +146,9 @@ async function createGame() {
             document.getElementById('game-category-display').textContent = data.game_category;
             document.getElementById('start-btn').style.display = 'block';
 
-            showMessage(`Game created! Code: ${data.session_id}`, 'success');
+            showMessage(`Code: ${data.session_id}`, 'success');
             refreshLobby();
-            startLobbyAutoRefresh();
+            startPolling();
         } else {
             console.log('API returned error:', data.message);
             showMessage(data.message, 'error');
@@ -130,9 +188,9 @@ async function joinGame() {
             document.getElementById('game-code-display').textContent = sessionId;
             document.getElementById('start-btn').style.display = 'none';
 
-            showMessage(`Joined game: ${sessionId}`, 'success');
+            showMessage(`Joined!`, 'success');
             refreshLobby();
-            startLobbyAutoRefresh();
+            startPolling();
         } else {
             showMessage(data.message, 'error');
         }
@@ -153,33 +211,28 @@ async function refreshLobby() {
             if (lastPhase === 'waiting' && data.current_phase !== 'waiting') {
                 lastPhase = data.current_phase;
                 // Game has been started by creator, transition to game screen
-                stopLobbyAutoRefresh();
                 document.getElementById('game-created-screen').style.display = 'none';
                 document.getElementById('game-playing-screen').style.display = 'block';
                 loadGameState();
                 startGameTimers();
-                startAutoRefresh();
+                startPolling();
                 return;
             }
             lastPhase = data.current_phase;
 
-            const playersHtml = data.players.map(p => 
+            const playersHtml = data.players.map(p =>
                 `<div class="player-item">
                     <span class="player-name">${p.player_name}</span>
-                    <span class="player-status">${p.is_alive ? '🟢 Active' : '🔴 Voted Out'}</span>
+                    <span class="player-status">${p.is_alive ? '🟢' : '🔴'}</span>
                 </div>`
             ).join('');
             document.getElementById('lobby-players').innerHTML = playersHtml;
-            
+
             // Only show start button to creator
             if (isCreator) {
                 const startBtn = document.getElementById('start-btn');
                 startBtn.disabled = data.players.length < 2;
-                if (data.players.length < 2) {
-                    startBtn.textContent = `Start Game (Need ${2 - data.players.length} more players)`;
-                } else {
-                    startBtn.textContent = 'Start Game';
-                }
+                startBtn.textContent = data.players.length < 2 ? `Need ${2 - data.players.length} more` : 'Start Game';
             }
         }
     } catch (error) {
@@ -192,32 +245,17 @@ async function manualRefreshLobby() {
     const btn = event.target;
     btn.style.transform = 'rotate(360deg)';
     btn.style.transition = 'transform 0.6s ease-in-out';
-    
+
     await refreshLobby();
-    
+
     setTimeout(() => {
         btn.style.transform = 'rotate(0deg)';
     }, 600);
 }
 
-// Start auto-refresh for lobby (every 5 seconds)
-function startLobbyAutoRefresh() {
-    if (lobbyRefreshInterval) clearInterval(lobbyRefreshInterval);
-    
-    lobbyRefreshInterval = setInterval(() => {
-        if (document.getElementById('game-created-screen').style.display !== 'none') {
-            refreshLobby();
-        }
-    }, 5000);
-}
-
-// Stop lobby auto-refresh
-function stopLobbyAutoRefresh() {
-    if (lobbyRefreshInterval) {
-        clearInterval(lobbyRefreshInterval);
-        lobbyRefreshInterval = null;
-    }
-}
+// Legacy aliases – kept so existing calls don't break
+function startLobbyAutoRefresh() { startPolling(); }
+function stopLobbyAutoRefresh() { /* handled by unified poller */ }
 
 // Start Game
 async function startGame() {
@@ -232,12 +270,11 @@ async function startGame() {
 
         if (data.success) {
             showMessage('Game started!', 'success');
-            stopLobbyAutoRefresh();
             document.getElementById('game-created-screen').style.display = 'none';
             document.getElementById('game-playing-screen').style.display = 'block';
             loadGameState();
             startGameTimers();
-            startAutoRefresh();
+            startPolling();
         } else {
             showMessage(data.message, 'error');
         }
@@ -271,16 +308,17 @@ async function loadGameState() {
             }
 
             gameState = data;
+            restartPollingIfNeeded(data.current_phase);
             lastPhase = data.current_phase;
 
             // Display the topic word
             document.getElementById('topic-display').textContent = data.your_topic || 'Loading...';
 
             // Display players
-            const playersHtml = data.players.map(p => 
+            const playersHtml = data.players.map(p =>
                 `<div class="player-item ${!p.is_alive ? 'voted-out' : ''}">
-                    <span class="player-name">${p.player_name} ${currentPlayerId === p.player_id ? '(You)' : ''}</span>
-                    <span class="player-status">${!p.is_alive ? '❌ Voted Out' : '✅ Active'}</span>
+                    <span class="player-name">${p.player_name}${currentPlayerId === p.player_id ? ' (You)' : ''}</span>
+                    <span class="player-status">${!p.is_alive ? '❌' : '✅'}</span>
                 </div>`
             ).join('');
 
@@ -326,7 +364,7 @@ function showVotingPhase(data) {
 
     const votingButtonsHtml = data.players
         .filter(p => p.is_alive)
-        .map(p => 
+        .map(p =>
             `<button onclick="submitVote('${p.player_id}')" ${hasVoted ? 'disabled' : ''}>
                 ${p.player_name}
                 ${data.voters.includes(p.player_id) ? '<span class="voted-check">✔</span>' : ''}
@@ -336,7 +374,7 @@ function showVotingPhase(data) {
     document.getElementById('voting-buttons').innerHTML = votingButtonsHtml;
 
     if (hasVoted) {
-        document.getElementById('voting-buttons').innerHTML += '<p>You have already voted.</p>';
+        document.getElementById('voting-buttons').innerHTML += '<p style="text-align:center;color:#8a84a8;margin-top:8px;font-size:13px;">Voted ✓</p>';
     }
 }
 
@@ -395,27 +433,49 @@ async function showGameResult() {
 
         if (data.success && data.game_result) {
             const result = data.game_result;
+
+            // Support both new (list) and old (singular) response shapes
+            const votedOutNames = result.voted_out_names || [result.voted_out_name];
+            const votedOutIds = result.voted_out_ids || [result.voted_out_id];
+            const isTie = result.is_tie || false;
+
+            // Build voted-out display
+            const votedOutDisplay = votedOutNames.map(name =>
+                `<span style="font-weight:700;">${name}</span>`
+            ).join(', ');
+
+            const tieBadge = isTie
+                ? `<span style="display:inline-block; background:rgba(255,152,0,0.2); color:#ffcc99; border:1px solid rgba(255,152,0,0.4); padding:4px 12px; border-radius:20px; font-size:13px; margin-bottom:10px;">⚡ TIE — ${votedOutNames.length} players eliminated</span><br>`
+                : '';
+
             const resultHtml = `
                 <div class="alert ${result.is_imposter_caught ? 'alert-success' : 'alert-warning'}" style="font-size: 16px; padding: 20px; text-align: center;">
+                    ${tieBadge}
                     <strong>${result.message}</strong>
-                    <p style="margin-top: 10px; font-size: 16px;">Voted out: <strong>${result.voted_out_name}</strong></p>
+                    <p style="margin-top: 10px; font-size: 16px;">Voted out: ${votedOutDisplay}</p>
                     <p style="margin-top: 5px; font-size: 16px;">Winners: <strong>${result.winners}</strong></p>
                 </div>
             `;
             document.getElementById('game-result-content').innerHTML = resultHtml;
 
-            const tableHtml = data.players.map(p => `
-                <tr>
-                    <td>${p.player_name}</td>
+            const tableHtml = data.players.map(p => {
+                const wasVotedOut = votedOutIds.includes(p.player_id);
+                const rowStyle = wasVotedOut
+                    ? 'border-left: 3px solid rgba(255,152,0,0.6);'
+                    : '';
+                return `
+                <tr style="${rowStyle}">
+                    <td>${p.player_name}${wasVotedOut && isTie ? ' ⚡' : ''}</td>
                     <td>${p.player_id === result.imposter_id ? '🕵️ Imposter' : '👥 Player'}</td>
                     <td>${p.is_alive ? '✅ Alive' : '❌ Voted Out'}</td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
             document.getElementById('result-table-body').innerHTML = tableHtml;
 
             document.getElementById('game-playing-screen').style.display = 'none';
             document.getElementById('game-result-screen').style.display = 'block';
-            
+
             clearGameTimers();
         }
     } catch (error) {
@@ -431,21 +491,20 @@ async function listGames() {
 
         if (data.success && data.games.length > 0) {
             const gamesHtml = `
-                <h3 style="margin-top: 30px;">🎮 Available Games</h3>
+                <h3 style="margin-top: 20px;">Available Games</h3>
                 <div class="games-grid">
                     ${data.games.map(game => `
                         <div class="game-item" onclick="selectGame('${game.session_id}')">
-                            <h4>📂 ${game.game_category}</h4>
-                            <p>👥 Players: ${game.player_count}/${game.max_players}</p>
-                            <p>🕐 Created: ${new Date(game.created_at).toLocaleTimeString()}</p>
-                            <button onclick="selectGame('${game.session_id}', event)" style="width: 100%; padding: 8px;">Join This Game</button>
+                            <h4>${game.game_category}</h4>
+                            <p>👥 ${game.player_count}/${game.max_players}</p>
+                            <button onclick="selectGame('${game.session_id}', event)" style="width: 100%; padding: 8px;">Join</button>
                         </div>
                     `).join('')}
                 </div>
             `;
             document.getElementById('available-games').innerHTML = gamesHtml;
         } else {
-            document.getElementById('available-games').innerHTML = '<p style="text-align: center; color: #999; margin-top: 30px;">No games available. Create one!</p>';
+            document.getElementById('available-games').innerHTML = '<p style="text-align:center;color:#8a84a8;margin-top:20px;font-size:13px;">No games found</p>';
         }
     } catch (error) {
         showMessage('Error loading games: ' + error.message, 'error');
@@ -467,7 +526,7 @@ function startGameTimers() {
     timers.discussion = setInterval(() => {
         const mins = Math.floor(elapsedTime / 60);
         const secs = elapsedTime % 60;
-        document.getElementById('game-timer').textContent = 
+        document.getElementById('game-timer').textContent =
             `${mins}:${secs.toString().padStart(2, '0')}`;
         elapsedTime++;
 
@@ -485,38 +544,28 @@ function clearGameTimers() {
     timers = {};
 }
 
-// Auto-refresh game state
-function startAutoRefresh() {
-    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-    autoRefreshInterval = setInterval(() => {
-        if (document.getElementById('game-created-screen').style.display !== 'none') {
-            refreshLobby();
-        } else if (document.getElementById('game-playing-screen').style.display !== 'none' || document.getElementById('game-result-screen').style.display !== 'none') {
-            loadGameState();
-        }
-    }, 2000);
-}
+// Legacy alias – kept so existing calls don't break
+function startAutoRefresh() { startPolling(); }
 
 // Go Back
 function goBack(fromResult = false) {
     if (currentSession && !fromResult) {
-        const confirmation = confirm("Are you sure you want to leave the game? The game might end if you are the creator.");
+        const confirmation = confirm("Leave this game?");
         if (!confirmation) {
             return;
         }
     }
 
     clearGameTimers();
-    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-    stopLobbyAutoRefresh();
-    
+    stopPolling();
+
     document.getElementById('initial-screen').style.display = 'block';
     document.getElementById('game-created-screen').style.display = 'none';
     document.getElementById('game-playing-screen').style.display = 'none';
     document.getElementById('game-result-screen').style.display = 'none';
     document.getElementById('create-form').style.display = 'none';
     document.getElementById('join-form').style.display = 'none';
-    
+
     currentSession = null;
     currentPlayerId = null;
     isCreator = false;
@@ -526,7 +575,7 @@ function goBack(fromResult = false) {
 
 async function playAgain() {
     if (!isCreator) {
-        showMessage("Only the game creator can start a new round.", "info");
+        showMessage("Only the creator can restart.", "info");
         return;
     }
 
@@ -542,7 +591,7 @@ async function playAgain() {
             document.getElementById('game-created-screen').style.display = 'block';
             lastPhase = 'waiting';
             refreshLobby();
-            startLobbyAutoRefresh();
+            startPolling();
         } else {
             showMessage(data.message, 'error');
         }

@@ -1,26 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guess the Imposter Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0612">
+    <meta name="description"
+        content="Guess the Imposter — a social deduction party game. Create or join a game, discuss, vote, and find the imposter!">
+    <title>Guess the Imposter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+    <!-- Ambient floating particles -->
+    <div class="particles" aria-hidden="true">
+        <span></span><span></span><span></span>
+        <span></span><span></span><span></span>
+    </div>
+
     <div class="container">
         <!-- GAME PANEL -->
         <div class="panel active" id="game-panel">
             <div class="game-header">
-                <h1 style="color: rgba(175, 176, 238, 0.672);">Guess the Imposter</h1>
+                <h1>Guess the Imposter</h1>
             </div>
 
             <div class="card">
                 <!-- Initial Screen -->
                 <div id="initial-screen">
-                    <div class="welcome-section">
-                        <h2>Ready?</h2>
-                    </div>
 
                     <!-- Option Buttons -->
                     <div class="option-buttons">
@@ -36,15 +47,13 @@
 
                     <!-- Create Game Form (Hidden by default) -->
                     <form id="create-form" class="game-form" style="display: none;">
-                        <h3 class="form-title">Create New Game</h3>
+                        <h3 class="form-title">New Game</h3>
                         <div class="form-group">
-                            <label for="creator-name">Your Name</label>
-                            <input type="text" id="creator-name" placeholder="Enter your name" required>
+                            <input type="text" id="creator-name" placeholder="Your name" required>
                         </div>
                         <div class="form-group">
-                            <label for="game-category">Category</label>
                             <select id="game-category" required>
-                                <option value="">-- Select Category --</option>
+                                <option value="">Category…</option>
                                 <option value="animals">🦁 Animals</option>
                                 <option value="professions">💼 Professions</option>
                                 <option value="celebrities">🦸 Celebrities</option>
@@ -58,22 +67,20 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="max-players">Players (2-16)</label>
-                            <input type="number" id="max-players" value="8" min="2" max="16" required>
+                            <input type="number" id="max-players" value="8" min="2" max="16" placeholder="Max players"
+                                required>
                         </div>
                         <button type="button" onclick="createGame()" class="btn-primary">Create Game</button>
                     </form>
 
                     <!-- Join Game Form (Hidden by default) -->
                     <form id="join-form" class="game-form" style="display: none;">
-                        <h3 class="form-title">Join Existing Game</h3>
+                        <h3 class="form-title">Join Game</h3>
                         <div class="form-group">
-                            <label for="join-player-name">Your Name</label>
-                            <input type="text" id="join-player-name" placeholder="Enter your name" required>
+                            <input type="text" id="join-player-name" placeholder="Your name" required>
                         </div>
                         <div class="form-group">
-                            <label for="session-id">Game Code</label>
-                            <input type="text" id="session-id" placeholder="e.g., ABC123" required>
+                            <input type="text" id="session-id" placeholder="Game code" required>
                         </div>
                         <div class="button-group-form">
                             <button type="button" onclick="joinGame()" class="btn-primary">Join Game</button>
@@ -87,66 +94,63 @@
 
                 <!-- Game Created Screen -->
                 <div id="game-created-screen" style="display: none;">
-                    <h2 style="color: rgba(175, 176, 238, 0.672);" >Game Created!</h2>
+                    <h2 class="screen-title">Lobby</h2>
                     <div class="session-info session-inline">
                         <p><strong>Game Code:</strong> <span id="game-code-display"></span></p>
                         <p><strong>Category:</strong> <span id="game-category-display"></span></p>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 style="color: rgba(175, 176, 238, 0.672);">Waiting for Players to Join...</h3>
-                        <button onclick="manualRefreshLobby()" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 5px; transition: transform 0.3s;" title="Refresh players list">↻</button>
+                    <div class="lobby-header">
+                        <h3>Players</h3>
+                        <button class="refresh-btn" onclick="manualRefreshLobby()" title="Refresh">↻</button>
                     </div>
                     <div class="player-list" id="lobby-players"></div>
 
-                    <button onclick="startGame()" id="start-btn" style="width: 100%; margin-top: 20px; display: none;">Start Game (Need 2+ players)</button>
-                    <button onclick="goBack()" style="width: 100%; margin-top: 10px; background: #3b3a3a;">Go Back</button>
+                    <button onclick="startGame()" id="start-btn" class="btn-primary btn-full"
+                        style="display: none;">Start Game</button>
+                    <button onclick="goBack()" class="btn-back btn-full">← Back</button>
                 </div>
 
                 <!-- Game Playing Screen -->
                 <div id="game-playing-screen" style="display: none;">
-                    <div style="text-align: center; margin-bottom: 30px;">
+                    <div class="timer-section">
                         <div class="timer" id="game-timer">0:00</div>
-                        <p style="color: #999; font-size: 14px; margin-top: 10px;">Discussion Time</p>
                     </div>
 
-                    <div class="topic-display" id="topic-display" style="margin-bottom: 30px;">Loading...</div>
+                    <div class="topic-display" id="topic-display">Loading…</div>
 
-                    <h3 style="text-align: center; margin-bottom: 15px;">Playing</h3>
+
                     <div class="player-list" id="game-players"></div>
 
                     <!-- Quick Actions -->
-                    <div id="discussion-actions" style="margin-top: 25px;">
-                        <button onclick="transitionToVoting()" style="width: 100%; padding: 12px; font-size: 16px;">Start Voting</button>
+                    <div id="discussion-actions" class="action-section">
+                        <button onclick="transitionToVoting()" class="btn-primary btn-full btn-vote-start">🗳️
+                            Vote</button>
                     </div>
 
                     <!-- Voting Phase (Hidden by default) -->
-                    <div id="voting-section" style="display: none; margin-top: 25px;">
-                        <h3 style="text-align: center;">🗳️ Time to Vote</h3>
-                        <p style="text-align: center; color: #666; margin-bottom: 20px; font-size: 14px;">
-                            Who is the imposter?
-                        </p>
+                    <div id="voting-section" style="display: none;" class="action-section">
+                        <h3 class="section-heading">Who's the imposter?</h3>
                         <div class="voting-buttons" id="voting-buttons"></div>
                     </div>
 
                     <!-- Reveal Phase (Hidden by default) -->
-                    <div id="reveal-section" style="display: none; margin-top: 25px; text-align: center;">
-                        <h3 style="text-align: center;">All votes are in!</h3>
-                        <button onclick="showGameResult()" style="width: 100%; padding: 12px; font-size: 16px;">Reveal Imposter</button>
+                    <div id="reveal-section" style="display: none;" class="action-section reveal-glow">
+                        <button onclick="showGameResult()" class="btn-primary btn-full btn-reveal">🔍 Reveal</button>
                     </div>
                 </div>
 
                 <!-- Game Result Screen -->
                 <div id="game-result-screen" style="display: none;">
-                    <h2 style="text-align: center;">🎉 Game Over!</h2>
-                    
-                    <div id="result-countdown" style="display: none; text-align: center; font-size: 18px; margin-bottom: 20px;"></div>
+                    <h2 class="screen-title result-title">🎉 Results</h2>
 
-                    <div id="game-result-content" style="margin: 30px 0;">
+                    <div id="result-countdown" style="display: none;"></div>
+
+                    <div id="game-result-content" class="result-content">
                         <!-- Result will be populated here -->
                     </div>
 
-                    <div class="result-table">
-                        <table style="width: 100%;">
+                    <div class="result-table-wrap">
+                        <table class="result-table">
                             <thead>
                                 <tr>
                                     <th>Player</th>
@@ -158,13 +162,13 @@
                         </table>
                     </div>
 
-                    <button onclick="playAgain()" style="width: 100%; margin-top: 20px;">Play Again</button>
-                    <button onclick="goBack(true)" style="width: 100%; margin-top: 10px; background: #999;">Leave Game</button>
+                    <button onclick="playAgain()" class="btn-primary btn-full">Play Again</button>
+                    <button onclick="goBack(true)" class="btn-back btn-full">← Leave</button>
                 </div>
 
-                <!-- Error Display -->
-                <div id="error-message" style="display: none;"></div>
-                <div id="success-message" style="display: none;"></div>
+                <!-- Messages -->
+                <div id="error-message" class="msg-slot" style="display: none;"></div>
+                <div id="success-message" class="msg-slot" style="display: none;"></div>
             </div>
         </div>
     </div>
