@@ -12,12 +12,12 @@ let _pollPaused = false;
 
 // Phase → polling interval in ms
 const POLL_INTERVALS = {
-    waiting: 8000,  // lobby – nothing urgent
+    waiting: 6000,  // lobby – nothing urgent
     discussion: 5000,  // players talking, low urgency
     playing: 5000,  // alias for discussion
     voting: 2000,  // votes are time-sensitive
     reveal: 3000,  // short wait for reveal button
-    result: 6000,  // slow poll – detect "play again" from creator
+    result: 5000,  // slow poll – detect "play again" from creator
 };
 
 function getPollingInterval() {
@@ -294,6 +294,7 @@ async function loadGameState() {
             // Handle transition from result back to lobby or into a new round
             if (lastPhase === 'result' && data.current_phase !== 'result') {
                 document.getElementById('game-result-screen').style.display = 'none';
+                clearGameTimers();
                 // If server moved back to waiting, show created (lobby) screen
                 if (data.current_phase === 'waiting') {
                     document.getElementById('game-created-screen').style.display = 'block';
@@ -318,7 +319,7 @@ async function loadGameState() {
             const playersHtml = data.players.map(p =>
                 `<div class="player-item ${!p.is_alive ? 'voted-out' : ''}">
                     <span class="player-name">${p.player_name}${currentPlayerId === p.player_id ? ' (You)' : ''}</span>
-                    <span class="player-status">${!p.is_alive ? '❌' : '✅'}</span>
+                    <span class="player-status">${!p.is_alive ? '❌' : '🟢'}</span>
                 </div>`
             ).join('');
 
@@ -342,8 +343,10 @@ async function loadGameState() {
                 document.getElementById('voting-section').style.display = 'none';
                 document.getElementById('reveal-section').style.display = 'block';
             } else if (data.current_phase === 'result') {
-                // Result: move to result screen
-                showGameResult();
+                // Only transition to result screen once (avoid re-fetching /result every poll)
+                if (lastPhase !== 'result') {
+                    showGameResult();
+                }
             } else if (data.current_phase === 'waiting') {
                 // Waiting: treat as lobby
                 document.getElementById('game-playing-screen').style.display = 'none';
@@ -467,7 +470,7 @@ async function showGameResult() {
                 <tr style="${rowStyle}">
                     <td>${p.player_name}${wasVotedOut && isTie ? ' ⚡' : ''}</td>
                     <td>${p.player_id === result.imposter_id ? '🕵️ Imposter' : '👥 Player'}</td>
-                    <td>${p.is_alive ? '✅ Alive' : '❌ Voted Out'}</td>
+                    <td>${p.is_alive ? '🟢 Alive' : '❌ Voted Out'}</td>
                 </tr>
                 `;
             }).join('');
@@ -520,6 +523,8 @@ function selectGame(sessionId, event) {
 
 // Game Timers
 function startGameTimers() {
+    clearGameTimers();
+    document.getElementById('game-timer').textContent = '0:00';
     let elapsedTime = 0;
     const maxDiscussionTime = 600; // 10 minutes
 
