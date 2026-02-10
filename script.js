@@ -213,8 +213,8 @@ async function refreshLobby() {
                 // Game has been started by creator, transition to game screen
                 document.getElementById('game-created-screen').style.display = 'none';
                 document.getElementById('game-playing-screen').style.display = 'block';
-                loadGameState();
                 startGameTimers();
+                loadGameState();
                 startPolling();
                 return;
             }
@@ -272,8 +272,8 @@ async function startGame() {
             showMessage('Game started!', 'success');
             document.getElementById('game-created-screen').style.display = 'none';
             document.getElementById('game-playing-screen').style.display = 'block';
-            loadGameState();
             startGameTimers();
+            loadGameState();
             startPolling();
         } else {
             showMessage(data.message, 'error');
