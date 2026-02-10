@@ -304,6 +304,7 @@ async function loadGameState() {
                 } else {
                     // Server started a new round (discussion/voting), show playing screen
                     document.getElementById('game-playing-screen').style.display = 'block';
+                    startGameTimers();
                     // continue to render the current game state below
                 }
             }
