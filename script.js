@@ -343,10 +343,7 @@ async function loadGameState() {
                 document.getElementById('voting-section').style.display = 'none';
                 document.getElementById('reveal-section').style.display = 'block';
             } else if (data.current_phase === 'result') {
-                // Only transition to result screen once (avoid re-fetching /result every poll)
-                if (lastPhase !== 'result') {
-                    showGameResult();
-                }
+                showGameResult();
             } else if (data.current_phase === 'waiting') {
                 // Waiting: treat as lobby
                 document.getElementById('game-playing-screen').style.display = 'none';
