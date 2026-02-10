@@ -12,7 +12,7 @@ let _pollPaused = false;
 
 // Phase → polling interval in ms
 const POLL_INTERVALS = {
-    waiting: 6000,  // lobby – nothing urgent
+    waiting: 5000,  // lobby – nothing urgent
     discussion: 5000,  // players talking, low urgency
     playing: 5000,  // alias for discussion
     voting: 2000,  // votes are time-sensitive
