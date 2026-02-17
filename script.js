@@ -118,6 +118,12 @@ async function createGame() {
         return;
     }
 
+    if (maxPlayers < 3) {
+        console.log('Max players is less than 3');
+        showMessage('Max players should be at least 3', 'error');
+        return;
+    }
+
     try {
         console.log('Sending API request to create game...');
         const response = await fetch(`${API_BASE}/game/create`, {
