@@ -237,8 +237,18 @@ async function refreshLobby() {
             // Only show start button to creator
             if (isCreator) {
                 const startBtn = document.getElementById('start-btn');
-                startBtn.disabled = data.players.length < 2;
-                startBtn.textContent = data.players.length < 2 ? `Need ${2 - data.players.length} more` : 'Start Game';
+                const topicsReady = data.topics_ready !== false; // default true for backward compat
+                const enoughPlayers = data.players.length >= 3;
+
+                startBtn.disabled = !enoughPlayers || !topicsReady;
+
+                if (!enoughPlayers) {
+                    startBtn.textContent = `Need ${3 - data.players.length} more`;
+                } else if (!topicsReady) {
+                    startBtn.textContent = '⏳ Generating topics...';
+                } else {
+                    startBtn.textContent = 'Start Game';
+                }
             }
         }
     } catch (error) {
@@ -266,6 +276,14 @@ function stopLobbyAutoRefresh() { /* handled by unified poller */ }
 // Start Game
 async function startGame() {
     try {
+        // Pre-flight: ensure topics are ready before starting
+        const checkResp = await fetch(`${API_BASE}/game/${currentSession}?player_id=${currentPlayerId}`);
+        const checkData = await checkResp.json();
+        if (checkData.success && checkData.topics_ready === false) {
+            showMessage('Topics are still being generated, please wait a moment...', 'info');
+            return;
+        }
+
         const response = await fetch(`${API_BASE}/game/${currentSession}/start`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
