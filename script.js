@@ -146,6 +146,13 @@ async function createGame() {
             currentPlayerId = data.player_id;
             isCreator = true;
 
+            gtag('event', 'create_game', {
+                event_category: 'game',
+                session_id: data.session_id,
+                game_category: category,
+                max_players: maxPlayers,
+            });
+
             document.getElementById('initial-screen').style.display = 'none';
             document.getElementById('game-created-screen').style.display = 'block';
             document.getElementById('game-code-display').textContent = data.session_id;
@@ -188,6 +195,11 @@ async function joinGame() {
             currentSession = sessionId;
             currentPlayerId = data.player_id;
             isCreator = false;
+
+            gtag('event', 'join_game', {
+                event_category: 'game',
+                session_id: sessionId,
+            });
 
             document.getElementById('initial-screen').style.display = 'none';
             document.getElementById('game-created-screen').style.display = 'block';
@@ -293,6 +305,11 @@ async function startGame() {
         const data = await response.json();
 
         if (data.success) {
+            gtag('event', 'start_game', {
+                event_category: 'game',
+                session_id: currentSession,
+            });
+
             showMessage('Game started!', 'success');
             document.getElementById('game-created-screen').style.display = 'none';
             document.getElementById('game-playing-screen').style.display = 'block';
@@ -418,6 +435,11 @@ async function submitVote(targetPlayerId) {
         const data = await response.json();
 
         if (data.success) {
+            gtag('event', 'submit_vote', {
+                event_category: 'game',
+                session_id: currentSession,
+            });
+
             showMessage('Vote submitted!', 'success');
             loadGameState();
         } else {
@@ -438,6 +460,11 @@ async function transitionToVoting() {
         const data = await response.json();
 
         if (data.success) {
+            gtag('event', 'transition_to_voting', {
+                event_category: 'game',
+                session_id: currentSession,
+            });
+
             loadGameState();
         } else {
             showMessage(data.message, 'error');
@@ -457,6 +484,12 @@ async function showGameResult() {
         const data = await response.json();
 
         if (data.success && data.game_result) {
+            gtag('event', 'view_game_result', {
+                event_category: 'game',
+                session_id: currentSession,
+                imposter_caught: data.game_result.is_imposter_caught,
+                is_tie: data.game_result.is_tie || false,
+            });
             const result = data.game_result;
 
             // Support both new (list) and old (singular) response shapes
@@ -583,6 +616,12 @@ function goBack(fromResult = false) {
         }
     }
 
+    gtag('event', 'leave_game', {
+        event_category: 'game',
+        session_id: currentSession,
+        from_result: fromResult,
+    });
+
     clearGameTimers();
     stopPolling();
 
@@ -613,6 +652,11 @@ async function playAgain() {
         const data = await response.json();
 
         if (data.success) {
+            gtag('event', 'play_again', {
+                event_category: 'game',
+                session_id: currentSession,
+            });
+
             showMessage('Starting a new round!', 'success');
             document.getElementById('game-result-screen').style.display = 'none';
             document.getElementById('game-created-screen').style.display = 'block';
